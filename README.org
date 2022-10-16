@@ -1,3 +1,42 @@
+* New usage suggestions
+*change the default buffer-log directory*:
+"the location to store buffer-timer data.  Will get formated using
+format-time-string, so date specifications (like file-%Y-%m-%d) will
+work."
+
+#+begin_src elisp
+(setq buffer-timer-output-file    (concat (getenv "HOME") "/.log/buffer-timer-%Y-%m-%d")
+#+end_src
+
+*buffer-timer-idle-limit* can be modified as needed
+
+** posframe related issue
+Limited to issues of the times, special buffer not fully considered by ~buffer-timer-go-idle~, such as posframe. So we can advice it:
+#+begin_src elisp
+  (advice-add 'buffer-timer-go-idle :before #'posframe-delete-all)
+#+end_src
+or specify buffer name: (for example, I need to delete acm buffer)
+#+begin_src elisp
+  (defun weland/delete-posframe (&optional subtracttime)
+    (interactive)
+    (posframe-delete " *acm-doc-buffer*")
+    (posframe-delete " *acm-buffer*"))
+  (advice-add 'buffer-timer-go-idle :before #'weland/delete-posframe)
+#+end_src
+
+* What I have modified
+disable native-comp
+#+begin_src elisp
+;; -*- no-byte-compile: t; -*-
+#+end_src
+Now you need to explicitly require common lisp lib
+#+begin_src elisp
+(require 'cl)
+#+end_src
+use ~cl-parse-integer~ instead of ~string-to-int~
+
+------
+Here is the README from the original author
 
 * Overview
 
@@ -16,7 +55,7 @@ Define your categories in a hierarchical manner:
 ; Example list of titles and regexps to group by.  This
 (setq buffer-timer-regexp-master-list
   '(
-    ("idle" . 
+    ("idle" .
      (("generic" .			  "^\\*idle\\*")
       ("generic2" .			  "^\\*idle-2\\*")
       ("minibuf" .                        "^ \\*Minibuf-.*")))
