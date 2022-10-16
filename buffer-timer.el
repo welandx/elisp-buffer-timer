@@ -1,3 +1,4 @@
+;; -*- no-byte-compile: t; -*-
 ;;; buffer-timer.el --- Track your time based on the buffers you edit.
 ;;
 ;; Copyright (C) 2002-2004  Wes Hardaker <elisp@hardakers.net>
@@ -18,6 +19,7 @@
 ;; 02139, USA.
 ;;
 
+(require 'cl)
 (require 'gnus-spec)
 ;
 ; user setable variables
@@ -27,7 +29,7 @@
   "set to true if XEmacs is in use")
 
 (defvar buffer-timer-idle-limit 300
-  "the amount of time to wait for user input before switching to the 
+  "the amount of time to wait for user input before switching to the
 buffer-timer-idle-buffer buffer")
 
 (defvar buffer-timer-output-file    (concat (getenv "HOME") "/.buffer-timer")
@@ -39,7 +41,7 @@ work.")
   "If t, clears data from the buffer-timer on a filename change.
 If a date format string is included in the buffer-timer-output-file variable
 then the variable name will not be constant.  When it changes, this
-variable indicates if the timers data should be cleared for the new time 
+variable indicates if the timers data should be cleared for the new time
 period.")
 
 (defvar buffer-timer-idle-buffer "*idle*"
@@ -80,7 +82,7 @@ Swiched to after buffer-timer-idle-limit seconds.")
 		("summary" . "^\\*Summary\\*")
 		("out" . "drafts/[0-9]+$")))
     ("idle" .			  "^\\*idle\\*")
-    ("cvs" .			  "^\\*cvs.*\\*")           
+    ("cvs" .			  "^\\*cvs.*\\*")
     ("compiling" .		  "^\\*compilation\\*")
     ("emacs" . (("emacs-internal" .	  "^\\*")
 		("emacs-really-internal" . "^ ")))
@@ -169,7 +171,7 @@ Swiched to after buffer-timer-idle-limit seconds.")
 (defvar buffer-timer-do-warnings    	  nil)
 (defvar buffer-timer-locked         	  nil)
 (defvar buffer-timer-debug          	  'file)
-(defvar buffer-timer-debug-file   	 
+(defvar buffer-timer-debug-file
   (concat (getenv "HOME") "/.buffer-timer-log"))
 (defvar buffer-timer-debug-buffer   	  "*buffer-timer-log*")
 (defvar buffer-timer-debug-buf            nil)
@@ -344,7 +346,7 @@ static char *magick[] = {
 (defun bt-warn (arg &rest moreargs)
   (if buffer-timer-do-warnings
       (warn arg moreargs)))
-  
+
 (defun buffer-timer-get-current-buffer-string ()
   (or (buffer-file-name) (buffer-name)))
 
@@ -387,9 +389,9 @@ static char *magick[] = {
 		    (setq buffer-timer-recursive-watch t)
 		    (if (eq buffer-timer-debug 'file)
 			(setq buffer-timer-debug-buf
-			      (find-file-noselect 
+			      (find-file-noselect
 			       (format-time-string buffer-timer-debug-file)))
-		      (setq buffer-timer-debug-buf 
+		      (setq buffer-timer-debug-buf
 			    (get-buffer-create buffer-timer-debug-buffer)))
 		    (set-buffer buffer-timer-debug-buf)
 		    (make-local-variable 'save-buffers-skip)
@@ -432,11 +434,11 @@ static char *magick[] = {
 	(if timespent
 	    (progn
 	      (if currentnum
-		  (setcdr (assoc rename thelist) 
+		  (setcdr (assoc rename thelist)
 			  (+ currentnum timespent))
 		(setq thelist (cons (cons rename timespent) thelist)))
-	      (buffer-timer-debug-msg 
-	       (format "%4d %s %s\n" timespent 
+	      (buffer-timer-debug-msg
+	       (format "%4d %s %s\n" timespent
 		       (buffer-timer-time-string timespent) rename))))
       (bt-warn "empty buffer name passed in"))
     (setq buffer-timer-switch-time now)
@@ -450,10 +452,10 @@ static char *magick[] = {
 (defun buffer-timer-transfer-time (from to timeamount &optional confirm)
   "transfer TIMEAMOUNT seconds from FROM to TO"
   (interactive (list
-		(completing-read 
+		(completing-read
 		 (concat "From Subject [" buffer-timer-idle-buffer "]: ")
 		 buffer-timer-data nil t nil nil buffer-timer-idle-buffer)
-		(completing-read (concat "To Subject: [" 
+		(completing-read (concat "To Subject: ["
 					 (caar buffer-timer-data) "]: ")
 				 buffer-timer-data
 				 nil nil nil nil (caar buffer-timer-data))
@@ -461,18 +463,18 @@ static char *magick[] = {
 		 (let ((tstring
 			(buffer-timer-time-string
 			 (if buffer-timer-switch-idle-time
-			     (+ 300 (- (buffer-timer-current-time) 
+			     (+ 300 (- (buffer-timer-current-time)
 				       buffer-timer-switch-idle-time))
 			   0))))
 		   (read-string (format "Transfer time [%s]: " tstring)
 				nil nil tstring)))))
   (if (or (not confirm)
-	  (y-or-n-p (format "transfer %s seconds from %s to %s? " 
+	  (y-or-n-p (format "transfer %s seconds from %s to %s? "
 			       (buffer-timer-time-string timeamount) from to)))
       (progn
 	(buffer-timer-remember from (- 0 timeamount))
 	(buffer-timer-remember to timeamount)
-	(message (format "transfered %s seconds from %s to %s" 
+	(message (format "transfered %s seconds from %s to %s"
 			 (buffer-timer-time-string timeamount) from to))
 	(buffer-timer-add-to-recent-list to)
 	)
@@ -481,7 +483,7 @@ static char *magick[] = {
 (defun buffer-timer-add-to-recent-list (item)
   "adds a string to the recent transfer list"
   (push item buffer-timer-recent-transfer-list)
-  (if (> (length buffer-timer-recent-transfer-list) 
+  (if (> (length buffer-timer-recent-transfer-list)
 	 buffer-timer-recent-transfer-list-max)
       (pop buffer-timer-recent-transfer-list)))
 
@@ -490,7 +492,7 @@ static char *magick[] = {
   "add TIMEAMOUNT seconds to TO for DAYSAGO in time (appends .el file)"
   (interactive (list
 		(read-number "Add to how many days ago: ")
-		(completing-read (concat "To Subject: [" 
+		(completing-read (concat "To Subject: ["
 					 (caar buffer-timer-data) "]: ")
 				 buffer-timer-data
 				 nil nil nil nil (caar buffer-timer-data))
@@ -498,7 +500,7 @@ static char *magick[] = {
 		 (let ((tstring
 			(buffer-timer-time-string
 			 (if buffer-timer-switch-idle-time
-			     (+ 300 (- (buffer-timer-current-time) 
+			     (+ 300 (- (buffer-timer-current-time)
 				       buffer-timer-switch-idle-time))
 			   0))))
 		   (read-string (format "Transfer time [%s]: " tstring)
@@ -506,7 +508,7 @@ static char *magick[] = {
   (setq daysago (- 0 daysago))
   (save-excursion
     (let* ((date (buffer-timer-get-days-ago daysago))
-	   (filename 
+	   (filename
 	    (format-time-string (concat buffer-timer-output-file ".el")
 				date))
 	   buf)
@@ -519,7 +521,7 @@ static char *magick[] = {
 			      to timeamount))
 	      (save-buffer)
 	      (message (format "added %s to %s, %d days ago in %s"
-			       (buffer-timer-time-string timeamount) to 
+			       (buffer-timer-time-string timeamount) to
 			       daysago filename)))
 	  (error (format "no file for that day: %s" filename))))))
 
@@ -527,7 +529,7 @@ static char *magick[] = {
 (defun buffer-timer-adjust-time (to timeamount)
   "add TIMEAMOUNT seconds to TO"
   (interactive (list
-		(completing-read (concat "To Subject: [" 
+		(completing-read (concat "To Subject: ["
 					 (caar buffer-timer-data) "]: ")
 				 buffer-timer-data
 				 nil nil nil nil (caar buffer-timer-data))
@@ -535,7 +537,7 @@ static char *magick[] = {
 		 (let ((tstring
 			(buffer-timer-time-string
 			 (if buffer-timer-switch-idle-time
-			     (+ 300 (- (buffer-timer-current-time) 
+			     (+ 300 (- (buffer-timer-current-time)
 				       buffer-timer-switch-idle-time))
 			   0))))
 		   (read-string (format "Transfer time [%s]: " tstring)
@@ -584,7 +586,7 @@ static char *magick[] = {
   "Saves the .el reloadable log files"
   (interactive)
   (save-excursion
-    (let ((buf 
+    (let ((buf
 	   (find-file-noselect (concat (buffer-timer-create-file-name) ".el")))
 	  (list buffer-timer-data))
       (set-buffer buf)
@@ -648,7 +650,7 @@ static char *magick[] = {
       (setq list (cdr list)))))
 
 ;
-; 
+;
 ;
 
 ;
@@ -687,11 +689,11 @@ static char *magick[] = {
 	  (setq list (cdr list))))
 	  (insert "----------------------------------------------------------------------\n")
       (if (> idletime 0)
-	  (insert (format "%s\tTotal not idle\n" (buffer-timer-time-string 
+	  (insert (format "%s\tTotal not idle\n" (buffer-timer-time-string
 						  (- addedtime
 						     idletime)))))
       (insert (format "%s\tTotal\n" (buffer-timer-time-string addedtime)))
-      (insert (format "\nTimer Started:  %s\n" (current-time-string 
+      (insert (format "\nTimer Started:  %s\n" (current-time-string
 					       buffer-timer-start-time)))
       (insert (format "Running for:   %s"
 		      (buffer-timer-time-string (- (buffer-timer-current-time)
@@ -705,23 +707,23 @@ static char *magick[] = {
 (defun buffer-timer-convert-time-string (timestr)
   (if (not (string-match "[hsm]" timestr))
       ; straight seconds, no specfiers
-      (string-to-int timestr)
+      (cl-parse-integer timestr)
     (let ((time 0))
       (if (string-match "\\([0-9]+s\\)" timestr)
-	  (setq time (string-to-int
-		      (substring timestr (match-beginning 1) 
+	  (setq time (cl-parse-integer
+		      (substring timestr (match-beginning 1)
 				 (1- (match-end 1))))))
       (if (string-match "\\([0-9]+m\\)" timestr)
 	  (setq time (+ time
-			(* 60 (string-to-int
-			       (substring timestr 
-					  (match-beginning 1) 
+			(* 60 (cl-parse-integer
+			       (substring timestr
+					  (match-beginning 1)
 					  (1- (match-end 1))))))))
       (if (string-match "\\([0-9]+h\\)" timestr)
 	  (setq time (+ time
-			(* 3600 (string-to-int
-				 (substring timestr 
-					    (match-beginning 1) 
+			(* 3600 (cl-parse-integer
+				 (substring timestr
+					    (match-beginning 1)
 					    (1- (match-end 1))))))))
       time)))
 
@@ -744,13 +746,13 @@ static char *magick[] = {
 
       ; reclassify the list
       (while list
-	(setq reportlist 
-	      (buffer-timer-remember 
-	       (if buffer-timer-rename-always (caar list) 
+	(setq reportlist
+	      (buffer-timer-remember
+	       (if buffer-timer-rename-always (caar list)
 		 (buffer-timer-maybe-rename (caar list)))
 	       (cdar list) reportlist))
 	(setq list (cdr list)))
-      
+
       ; sort the list
       (cond
        ((eq sortby 'time)
@@ -775,11 +777,11 @@ static char *magick[] = {
       ; display a summary count
       (insert "----------------------------------------------------------------------\n")
       (if (> idletime 0)
-	  (insert (format "%s\tTotal not idle\n" (buffer-timer-time-string 
+	  (insert (format "%s\tTotal not idle\n" (buffer-timer-time-string
 						  (- addedtime
 						     idletime)))))
       (insert (format "%s\tTotal\n" (buffer-timer-time-string addedtime)))
-      (insert (format "\nTimer Started:  %s\n" (current-time-string 
+      (insert (format "\nTimer Started:  %s\n" (current-time-string
 					       buffer-timer-start-time)))
       (insert (format "Running for:   %s"
 		      (buffer-timer-time-string (- (buffer-timer-current-time)
@@ -804,7 +806,7 @@ static char *magick[] = {
 	  (setq buffer-timer-topic-depth-2 (nth 1 chain))
 	  (setq buffer-timer-topic-depth-3 (nth 2 chain))))
     (if buffer-timer-search-a
-	(setq buffer-timer-search-string-a 
+	(setq buffer-timer-search-string-a
 	      (buffer-timer-find-munge-string
 	       buffer-timer-search-a)))
     (if buffer-timer-search-1
@@ -826,9 +828,9 @@ static char *magick[] = {
   (interactive)
 ;	(message (format "saving data %d" buffer-timer-do-early-idle-count))
   (buffer-timer-idle-switch)
-  (setq buffer-timer-do-early-idle-count 
+  (setq buffer-timer-do-early-idle-count
 	(+ buffer-timer-do-early-idle-count 1))
-  (if (> buffer-timer-do-early-idle-count 
+  (if (> buffer-timer-do-early-idle-count
 	 buffer-timer-save-every-x-idletimes)
       (buffer-timer-do-idle-calculations)))
 
@@ -836,16 +838,16 @@ static char *magick[] = {
   (let ((label (button-label button)))
     (buffer-timer-transfer-time
      buffer-timer-idle-buffer label
-     (+ 300 (- (buffer-timer-current-time) 
-	       buffer-timer-switch-idle-time)) 
+     (+ 300 (- (buffer-timer-current-time)
+	       buffer-timer-switch-idle-time))
      t)))
 
 (defun buffer-timer-do-idle-button-and-switch (button)
   (let ((label (button-label button)))
     (buffer-timer-transfer-time
      buffer-timer-idle-buffer label
-     (+ 300 (- (buffer-timer-current-time) 
-	       buffer-timer-switch-idle-time)) 
+     (+ 300 (- (buffer-timer-current-time)
+	       buffer-timer-switch-idle-time))
      t))
 
   (buffer-timer-switch-all-windows-to-nolonger-idle)
@@ -865,13 +867,13 @@ static char *magick[] = {
 	  (setq ext (extent-at pt (event-buffer event) nil ext 'at))))
     (if (and (overlayp ext) (overlay-get ext 'unlock))
 	(buffer-timer-unlock)
-      
+
       (if ext (setq to (overlay-get ext 'towhat)))
       (if (symbolp to) (setq to (symbol-name to)))
       (if to
 	  (buffer-timer-transfer-time buffer-timer-idle-buffer to
-				      (+ 300 (- (buffer-timer-current-time) 
-						buffer-timer-switch-idle-time)) 
+				      (+ 300 (- (buffer-timer-current-time)
+						buffer-timer-switch-idle-time))
 				      t)
 	(call-interactively 'buffer-timer-transfer-time)))))
 
@@ -903,7 +905,7 @@ static char *magick[] = {
   (interactive)
   (erase-buffer)
   (insert "You've gone idle!  Do you want to:\n\n")
-  (let ((here (point)) 
+  (let ((here (point))
 	(frequent buffer-timer-frequent-topic-list)
 	(frequent2 buffer-timer-recent-transfer-list)
 	(lastbuf (buffer-name (other-buffer)))
@@ -943,7 +945,7 @@ static char *magick[] = {
 		 (label (if (symbolp (car frequent))
 					 (symbol-name (car frequent) )
 				       (car frequent)))
-		 (thestring (concat "\tApply current idle time to \"" 
+		 (thestring (concat "\tApply current idle time to \""
 				    label
 				     "\"\n")))
 
@@ -986,13 +988,13 @@ static char *magick[] = {
       (progn
 	(buffer-timer-idle-switch)
 	(if buffer-timer-locked
-	    (message (concat "not going idle: currently locked to \"" 
+	    (message (concat "not going idle: currently locked to \""
 			     buffer-timer-locked "\""))
 	  (if (and subtracttime buffer-timer-switch-time)
 	      ;; we need to manually calculate the times for buffers dealing
 	      ;; with the fact that the last X number of seconds should be
 	      ;; marked as idle.
-	      (progn 
+	      (progn
 		(cond
 		 ;; we've switched early.  Only record the idle time.
 		 ((> (+ buffer-timer-switch-time subtracttime)
@@ -1116,14 +1118,14 @@ static char *magick[] = {
 		  (setq buffer-timer-old-extent (cdr buffer-timer-old-extent))))
 	    (setq buffer-timer-old-extent
 		  (list myext theext))
-	    (set-gutter-element default-gutter 'buffer-timer 
+	    (set-gutter-element default-gutter 'buffer-timer
 				thestring)
 	    )))
   ;; do nothing on emacs
   (defun buffer-timer-do-gutter-string ())
   )
 
-  
+
 ;
 ; easy to use functions
 ;
@@ -1148,7 +1150,7 @@ static char *magick[] = {
 (defun buffer-timer-lock (lockto)
   (interactive
    (list
-    (completing-read (concat "Lock To [" 
+    (completing-read (concat "Lock To ["
 			     (buffer-timer-get-current-buffer-string) "]: ")
 		     buffer-timer-data
 		     nil nil nil nil (buffer-timer-get-current-buffer-string))))
@@ -1164,7 +1166,7 @@ static char *magick[] = {
 (defun buffer-timer-unlock ()
   (interactive)
   (if buffer-timer-locked
-      (let ((time-locked (- (buffer-timer-current-time) 
+      (let ((time-locked (- (buffer-timer-current-time)
 			    buffer-timer-lock-started)))
 	(buffer-timer-remember buffer-timer-locked time-locked)
 	(let ((msg (format "locked to %s for %s"
@@ -1198,24 +1200,24 @@ static char *magick[] = {
 (define-key buffer-timer-munge-map [(return)] 'buffer-timer-toggle-munge-state)
 
 ; idle buffer map
-(defvar buffer-timer-idle-button-map 
+(defvar buffer-timer-idle-button-map
   (make-sparse-keymap "buffer-timer-idle-button-keys")
   "Keymap to apply transforms.")
 
-(define-key buffer-timer-idle-button-map [(button1)] 
+(define-key buffer-timer-idle-button-map [(button1)]
   'buffer-timer-do-idle-application)
-(define-key buffer-timer-idle-button-map [(button2)] 
+(define-key buffer-timer-idle-button-map [(button2)]
   'buffer-timer-do-idle-application)
-(define-key buffer-timer-idle-button-map [(button3)] 
+(define-key buffer-timer-idle-button-map [(button3)]
   'buffer-timer-do-idle-application)
-(define-key buffer-timer-idle-button-map [(return)] 
+(define-key buffer-timer-idle-button-map [(return)]
   'buffer-timer-do-idle-application)
 
 (defun buffer-timer-make-invis-button (ext &optional subregionext startinvis keymap help pt1 pt2 sub1 sub2)
   (if startinvis
       (overlay-put subregionext 'invisible t))
   (let ((mykeymap (or keymap buffer-timer-munge-map))
-	(helpstr 
+	(helpstr
 	 (or help "button2 toggles visibilty of sub-groups below this one.")))
     (overlay-put ext 'end-open t)
     (overlay-put ext 'start-open t)
@@ -1243,7 +1245,7 @@ static char *magick[] = {
 	 )
     (if (not ext)
 	(when overlays
-	  (while 
+	  (while
 	      (and
 	       (setq ext (car overlays))
 	       (not (setq subregion (overlay-get ext 'subregion)))
@@ -1274,8 +1276,8 @@ static char *magick[] = {
 	 ((and (listp (cdr rest))
 	       (listp (cadr rest))
 	       (integerp (caadr rest)))
-	  (if (setq ret 
-		    (buffer-timer-add-to-master (cdr rest) addstring value 
+	  (if (setq ret
+		    (buffer-timer-add-to-master (cdr rest) addstring value
 						(format "%s  " indent)))
 	      (progn
 		(setcar (car master) (+ value currentnum))
@@ -1296,8 +1298,8 @@ static char *magick[] = {
 		(setq ret t))
 	    ))
 	 (t
-	  (if (setq ret 
-		    (buffer-timer-add-to-master (cdr rest) addstring value 
+	  (if (setq ret
+		    (buffer-timer-add-to-master (cdr rest) addstring value
 						(format "%s  " indent)))
 	      (progn
 		(setcar (car master) (+ value currentnum))
@@ -1313,7 +1315,7 @@ static char *magick[] = {
   (string-lessp (cadr a) (cadr b)))
 
 (defun buffer-timer-display-munge-results (master indent depth)
-  (let ((sorted 
+  (let ((sorted
 	 (cond
 	  ((eq buffer-timer-summarize-sort-by 'time)
 	   (sort master 'buffer-timer-munge-sort-by-seconds))
@@ -1325,16 +1327,16 @@ static char *magick[] = {
 	    )
 	(if (and buffer-timer-munge-dont-show-zeros (not (eq 0 (caar sorted))))
 	    (progn
-	      (insert (format "%s %-30s %10s     %d\n" indent (cadar sorted) 
+	      (insert (format "%s %-30s %10s     %d\n" indent (cadar sorted)
 			      (buffer-timer-time-string (caar sorted))
 			      (caar sorted)))
 	      (if (and (listp (cddar sorted))
 		       (stringp (caddar sorted)))
 		  (let ((startpt (point)) (startlist (cdddar sorted)))
 		    (while startlist
-		      (insert (format "  %s %-10s %-30s     %d\n" 
+		      (insert (format "  %s %-10s %-30s     %d\n"
 				      indent
-				      (buffer-timer-time-string 
+				      (buffer-timer-time-string
 				       (second startlist))
 				      (car startlist)
 				      (second startlist)))
@@ -1353,7 +1355,7 @@ static char *magick[] = {
 	(if (and (listp (cddar sorted)) (listp (caddar sorted))
 		 (integerp (car (caddar sorted))))
 	    (let ((substart (point)))
-	      (buffer-timer-display-munge-results (cddar sorted) 
+	      (buffer-timer-display-munge-results (cddar sorted)
 						  (concat "  " indent)
 						  (1- depth))
 	      (if buffer-timer-limit-munge
@@ -1383,7 +1385,7 @@ static char *magick[] = {
       (setq low (- low 65536))
       (setq high (+ high 1)))
     (list high low)))
-  
+
 (defun buffer-timer-munge-date-range (daychgone daychgtwo)
   "display info from TODAY-DAYCHGONE to TODAY-DAYCHGTWO"
   (interactive "nNumber of days ago marking start of range to view: \nnNumber of days ago marking end of range to view: ")
@@ -1398,7 +1400,7 @@ static char *magick[] = {
     (let* ((date (buffer-timer-get-days-ago daychgone)))
       ; insert a date stamp
       (insert (format-time-string "\nDate:  %Y-%m-%d  %a\n" date))
-      (let ((filename 
+      (let ((filename
 	     (format-time-string (concat buffer-timer-output-file ".el")
 				 date)))
 ;	(insert (format "File (%d):  %s\n" daychgone filename))
@@ -1503,7 +1505,7 @@ static char *magick[] = {
   (if (not nodestroy)
       (erase-buffer))
   (let* ((master (buffer-timer-generate-munged list)))
-    (buffer-timer-display-munge-results master "" 
+    (buffer-timer-display-munge-results master ""
 					buffer-timer-munge-visible-depth))
   (buffer-timer-munge-mode))
 
@@ -1555,7 +1557,7 @@ static char *magick[] = {
   ;; note when we go idle for too long
   ;;
   (add-to-list 'buffer-timer-idle-timer-list
-	       (run-with-idle-timer buffer-timer-idle-limit t 
+	       (run-with-idle-timer buffer-timer-idle-limit t
 				    'buffer-timer-go-idle buffer-timer-idle-limit))
 
   (add-to-list 'buffer-timer-idle-timer-list
@@ -1569,7 +1571,7 @@ static char *magick[] = {
       (add-hook 'pre-idle-hook 'buffer-timer-idle-switch)
     ;(run-with-idle-timer buffer-timer-small-idle-time t 'buffer-timer-idle-switch)
     )
-    
+
   (add-hook 'kill-emacs-hook 'buffer-timer-stop)
 
   (if buffer-timer-use-gutter
