@@ -24,6 +24,29 @@ or specify buffer name: (for example, I need to delete acm buffer)
   (advice-add 'buffer-timer-go-idle :before #'weland/delete-posframe)
 #+end_src
 
+** Minibuffer getting spammed?
+Reference: https://emacs.stackexchange.com/questions/14706/suppress-message-in-minibuffer-when-a-buffer-is-saved
+
+#+begin_src elisp
+  (defmacro with-suppressed-message (&rest body)
+    "Suppress new messages temporarily in the echo area and the `*Messages*' buffer while BODY is evaluated."
+    (declare (indent 0))
+    (let ((message-log-max nil))
+      `(with-temp-message (or (current-message) "") ,@body)))
+
+  (with-suppressed-message (save-buffer))
+#+end_src
+or advice:
+#+begin_src elisp
+  (defun suppress-message-advice-around (fun &rest args)
+    (let (message-log-max)
+      (with-temp-message (or (current-message) "")
+        (apply fun args))))
+  ;; example: suppress any messages from `save-buffer'
+  (advice-add 'save-buffer :around 'suppress-message-advice-around)
+  ;; undo:
+  (advice-remove 'save-buffer 'suppress-message-advice-around)
+#+end_src
 * What I have modified
 disable native-comp
 #+begin_src elisp
